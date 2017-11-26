@@ -2,12 +2,17 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 
 	"golang.org/x/oauth2/google"
 
 	drive "google.golang.org/api/drive/v3"
+)
+
+var (
+	drv *drive.Service
 )
 
 func driveService() *drive.Service {
@@ -23,29 +28,28 @@ func driveService() *drive.Service {
 	}
 	client := getClient(config)
 
-	svc, err := drive.New(client)
+	drv, err := drive.New(client)
 	if err != nil {
 		log.Fatalf("Unable to retrieve drive Client %v", err)
 	}
 
-	return svc
+	return drv
 }
 
-/*
-	drive := driveService()
+func QueryFiles(q string) {
+	// q := "name contains 'astrolabe'"
+	r, err := drv.Files.List().Q(q).PageSize(10).
+		Fields("nextPageToken, files(id, name)").Do()
+	if err != nil {
+		log.Fatalf("Unable to retrieve files: %v", err)
+	}
 
-		r, err := drive.Files.List().Q("name contains 'astrolabe'").PageSize(10).
-			Fields("nextPageToken, files(id, name)").Do()
-		if err != nil {
-			log.Fatalf("Unable to retrieve files: %v", err)
+	log.Println("Files:")
+	if len(r.Files) > 0 {
+		for _, i := range r.Files {
+			log.Printf("%s (%s)\n", i.Name, i.Id)
 		}
-
-			log.Println("Files:")
-			if len(r.Files) > 0 {
-				for _, i := range r.Files {
-					log.Printf("%s (%s)\n", i.Name, i.Id)
-				}
-			} else {
-				fmt.Println("No files found.")
-			}
-*/
+	} else {
+		fmt.Println("No files found.")
+	}
+}

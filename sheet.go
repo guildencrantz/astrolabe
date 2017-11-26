@@ -1,30 +1,60 @@
 package main
 
 import (
-	"io/ioutil"
-	"log"
-
-	"golang.org/x/oauth2/google"
 	sheets "google.golang.org/api/sheets/v4"
 )
 
-func sheetsService() *sheets.Service {
-	b, err := ioutil.ReadFile(confFilePath(OAUTH_CLIENT_SECRET_KEY))
-	if err != nil {
-		log.Fatalf("Unable to read client secret file: %v", err)
+type Spreadsheet struct {
+	*sheets.Spreadsheet
+	transactions *TransactionSheet
+}
+
+func (ss *Spreadsheet) SetTransactionSheet() {
+	for _, s := range ss.Sheets {
+		if s.Properties.Title == "Transactions" {
+			ss.transactions = &TransactionSheet{Sheet: s}
+			ss.transactions.FindColumns()
+		}
+	}
+}
+
+type TransactionSheet struct {
+	*sheets.Sheet
+	DescriptionColumn int
+	CategoryColumn    int
+	AmountColumn      int
+}
+
+func (s *TransactionSheet) FindColumns() {
+	for _, d := range s.Data {
+		for i, v := range d.RowData[0].Values {
+			switch v.FormattedValue {
+			case "Description":
+				s.DescriptionColumn = i
+			case "Category":
+				s.CategoryColumn = i
+			case "Amount":
+				s.AmountColumn = i
+			}
+		}
+	}
+}
+
+func (s *TransactionSheet) Transactions() []Transaction {
+	t := []Transaction{}
+	for _, r := range s.Data[0].RowData {
+		t = append(t, Transaction{
+			Description: r.Values[s.DescriptionColumn],
+			Category:    r.Values[s.CategoryColumn],
+			Amount:      r.Values[s.AmountColumn],
+		})
 	}
 
-	// If modifying these scopes, delete your previously saved credentials
-	config, err := google.ConfigFromJSON(b, sheets.DriveScope)
-	if err != nil {
-		log.Fatalf("Unable to parse client secret file to config: %v", err)
-	}
-	client := getClient(config)
+	return t
+}
 
-	svc, err := sheets.New(client)
-	if err != nil {
-		log.Fatalf("Unable to retrieve sheets Client %v", err)
-	}
-
-	return svc
+type Transaction struct {
+	Description *sheets.CellData
+	Category    *sheets.CellData
+	Amount      *sheets.CellData
 }

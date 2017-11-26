@@ -7,25 +7,30 @@ import (
 )
 
 func main() {
+	log.Print("start")
+	defer func() { log.Print("finish") }()
 	// TODO: Need two modes: train and run.
 	run()
 }
 
 func run() {
-
-	sheets := []*sheet{}
+	sheets := []TargetSheet{}
 	if err := viper.UnmarshalKey(SHEETS_KEY, &sheets); err != nil {
-		log.Fatal("Unable to get sheets.", err)
+		log.Fatalf("Unable to get sheets.\n%e", err)
 	}
 
-	svc := sheetsService()
+	sht = sheetsService()
 
 	for _, s := range sheets {
-		f, err := svc.Spreadsheets.Get(s.Id).Do()
+		ss, err := sht.Spreadsheets.Get(s.ID).IncludeGridData(true).Do()
 		if err != nil {
-			log.Fatalf("Unable to get sheet '%s': %e", s.Id, err)
+			log.Fatalf("Unable to get sheet '%s': %e", s.ID, err)
 		}
 
-		log.Printf("Retrieved '%s'", f.SpreadsheetUrl)
+		spread := &Spreadsheet{Spreadsheet: ss}
+		spread.SetTransactionSheet()
+		t := spread.transactions.Transactions()
+
+		log.Printf("%#q", t)
 	}
 }

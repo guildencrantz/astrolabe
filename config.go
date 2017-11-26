@@ -16,6 +16,11 @@ const (
 	SHEETS_KEY              = "sheets"
 )
 
+type TargetSheet struct {
+	Name string `yaml:"name"`
+	ID   string `yaml:"id"`
+}
+
 // Configure viper defaults.
 func init() {
 	viper.SetDefault(OAUTH_CLIENT_SECRET_KEY, "client_secret.json")
